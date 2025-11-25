@@ -1,68 +1,41 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-
-const db = require('./database/db');
-
 app.use(express.json());
 
-// GET ALL TASKS
-app.get('/tasks', (req, res) => {
-  const stmt = db.prepare("SELECT * FROM tasks");
-  const tasks = stmt.all();
+let tasks = [];
+
+// Reset data untuk test
+app.reset = () => {
+  tasks.length = 0;
+};
+
+// GET
+app.get("/tasks", (req, res) => {
   res.json(tasks);
 });
 
-// CREATE TASK
-app.post('/tasks', (req, res) => {
-  const { title, description } = req.body;
-
-  const stmt = db.prepare("INSERT INTO tasks (title, description) VALUES (?, ?)");
-  const result = stmt.run(title, description);
-
-  res.status(201).json({
-    id: result.lastInsertRowid,
-    title,
-    description,
-    completed: 0
-  });
+// POST
+app.post("/tasks", (req, res) => {
+  const task = { id: tasks.length + 1, ...req.body };
+  tasks.push(task);
+  res.status(201).json(task);
 });
 
-// UPDATE TASK
-app.put('/tasks/:id', (req, res) => {
-  const id = req.params.id;
-  const { title, description, completed } = req.body;
+// PUT
+app.put("/tasks/:id", (req, res) => {
+  const { id } = req.params;
+  const index = tasks.findIndex((t) => t.id == id);
+  if (index === -1) return res.status(404).send("Not found");
 
-  const stmt = db.prepare(`
-    UPDATE tasks
-    SET title = COALESCE(?, title),
-        description = COALESCE(?, description),
-        completed = COALESCE(?, completed)
-    WHERE id = ?
-  `);
-
-  const result = stmt.run(title, description, completed, id);
-
-  if (result.changes === 0) {
-    return res.status(404).json({ message: "Task not found" });
-  }
-
-  const updated = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id);
-
-  res.json(updated);
+  tasks[index] = { id: Number(id), ...req.body };
+  res.json(tasks[index]);
 });
 
-// DELETE TASK
-app.delete('/tasks/:id', (req, res) => {
-  const id = req.params.id;
-
-  const stmt = db.prepare("DELETE FROM tasks WHERE id = ?");
-  const result = stmt.run(id);
-
-  if (result.changes === 0) {
-    return res.status(404).json({ message: "Task not found" });
-  }
-
-  res.status(204).send();
+// DELETE
+app.delete("/tasks/:id", (req, res) => {
+  const { id } = req.params;
+  tasks = tasks.filter((t) => t.id != id);
+  res.sendStatus(204);
 });
 
 module.exports = app;
