@@ -14,21 +14,35 @@ app.get("/tasks", (req, res) => {
   res.json(tasks);
 });
 
-// POST
+// POST /tasks
 app.post("/tasks", (req, res) => {
-  const task = { id: tasks.length + 1, ...req.body };
-  tasks.push(task);
-  res.status(201).json(task);
+  const { title, description } = req.body;
+
+  const newTask = {
+    id: tasks.length + 1,
+    title,
+    description,
+    completed: false,   // <= default
+  };
+
+  tasks.push(newTask);
+  res.status(201).json(newTask);
 });
 
-// PUT
+// PUT /tasks/:id
 app.put("/tasks/:id", (req, res) => {
   const { id } = req.params;
-  const index = tasks.findIndex((t) => t.id == id);
-  if (index === -1) return res.status(404).send("Not found");
+  const { title, completed } = req.body;
 
-  tasks[index] = { id: Number(id), ...req.body };
-  res.json(tasks[index]);
+  const task = tasks.find((t) => t.id == id);
+  if (!task) return res.status(404).send("Not found");
+
+  // hanya update field yang diperbolehkan
+  if (title !== undefined) task.title = title;
+  if (completed !== undefined) task.completed = completed;
+
+  // description TIDAK diubah
+  res.json(task);
 });
 
 // DELETE
